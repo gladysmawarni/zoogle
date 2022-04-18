@@ -16,7 +16,7 @@ from IPython.display import display
 
 
 #My API_Key:
-API_Key = "AIzaSyB3xWoeijTsJGjhSVehOv8PwNvLBV6Trxc"
+API_Key = input('Your API key: ')
 
 #Running googlemaps key:
 map_client = googlemaps.Client(API_Key)
