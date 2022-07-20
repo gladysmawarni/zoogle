@@ -8,15 +8,18 @@ BEGIN = {
 
 #import libraries:
 import time
+from cv2 import merge
 import pandas as pd
 import googlemaps 
 import random
 from math import radians, cos, sin, asin, sqrt
 from IPython.display import display
+from termcolor import colored
 
 
 #My API_Key:
-API_Key = input('Your API key: ')
+#API_Key = input('Your API key: ')
+API_Key = 'AIzaSyDWEOLTOW2tZPC3E6IJJ-tbGQM88qFk76I'
 
 #Running googlemaps key:
 map_client = googlemaps.Client(API_Key)
@@ -32,35 +35,35 @@ def start_game():
     """
     if(BEGIN["counter"] == 0):
         # ask for how many people are coming in the trip
-        BEGIN['people'] = float(input("""
+        BEGIN['people'] = float(input(colored("""
                      You are going on a journey to Lisbon!
                      You may go to 3 typical Lisbon places, each in a different area.
                      How many people are coming?
-                     """))
+                     """,'magenta')))
         # ask for the budget
-        BEGIN['budget'] = float(input("""
+        BEGIN['budget'] = float(input(colored("""
                      How much money do you have to visit all around in Lisbon?
-                     """))
+                     """, 'magenta')))
         # ask for the starting point
-        starting_point = input("""
+        starting_point = input(colored("""
                      Where will be your starting point?
-                     """)
+                     """, 'magenta'))
         # call function to store the starting point
         append_starting_point(starting_point)
     # if the round is less than 3 times
     # ask for the location to go
     elif(BEGIN["counter"] <= 3):
-        location_name = input("""
-                     Search for a place/address/city in Portugal:  
-                     """)  
+        location_name = input(colored("""
+                     Search for a place/address/city in Lisbon:  
+                     """, 'magenta'))  
         get_place_info(location_name)
     # if it's already 3 rounds
     # the program finished
     elif( BEGIN["counter"] == 4):
-        print("""
+        print(colored("""
                 You finished planning your trip!
-                """)
-        print(pd.DataFrame(BEGIN['plan_list']))
+                """, 'green'))
+        display(pd.DataFrame(BEGIN['plan_list']))
 
 
 def append_starting_point(starting_point):
@@ -107,8 +110,8 @@ def get_place_info(location_name):
         get_latlog(results)
 
     except:
-        print("""
-              We couldn't find the place you were looking for, type it again please!""")
+        print(colored("""
+              We couldn't find the place you were looking for, type it again please!""", 'red'))
         # if the place does not exists, we decrease the counter because the round does not finish
         BEGIN['counter'] -=1
         return start_game()
@@ -149,9 +152,9 @@ def restaurants_nearby(lati_logi_info):
     """
     map_client = googlemaps.Client(API_Key)
     lat_log = (lati_logi_info[0],lati_logi_info[1])
-    search_string = input("""
+    search_string = input(colored("""
                      What kind of food would you like to eat there?
-                     """)
+                     """, 'magenta'))
     distance = 5000  
     business_list = []
 
@@ -213,10 +216,16 @@ def treating_dataframes(maps_df, zomato_df):
     filtered_table = merged_df.drop(labels= ['business_status', 'geometry', 'icon',
        'icon_background_color', 'icon_mask_base_uri','opening_hours',
        'photos', 'place_id', 'plus_code','reference', 'scope',
-       'types',"vicinity", 'url', 'Address', 'Location', 'permanently_closed', 'Name', 'name_y', 'price'], axis=1).drop_duplicates(subset=None, keep='first', inplace=False, ignore_index=False)
+       'types',"vicinity", 'url', 'Address', 'Location', 'permanently_closed', 'Name', 'name_y', 'price', 'price_level'], axis=1).drop_duplicates(subset=None, keep='first', inplace=False, ignore_index=False)
+    
+    filtered_table.rename(columns={'name_x': 'Name', 'raing': 'Google Ratings', 'Ratings' : 'Zomato Ratings', 'user_ratings_total': 'Google Reviews',
+                                    'No. of reviews': 'Zomato Reviews'}, inplace= True)
+
+    # filtered_table.rename(columns={'name_x': 'Restaurant Name', 'rating': 'Ratings (Google)', 'user_ratings_total': 'No. of reviews (Google)',
+    #                                 'price_level': 'Price Level', 'Ratings': 'Ratings (Zomato)', 'No. of reviews': 'No. of reviews (Zomato)', 'price_per_person' : 'Price per Person'}, inplace= True)
 
     # sort by zomato's rating
-    display(filtered_table.sort_values(by= 'Ratings', ascending= False))
+    display(filtered_table.sort_values(by= 'Zomato Ratings', ascending= False))
     filtering_with_inputs(filtered_table)
 
 
@@ -224,34 +233,42 @@ def filtering_with_inputs(filtered_table):
     """
     This function let the user choose the restaurant they want from the dataframe 
     that we show, making sure the name matches.
-    Then calculate the price of the restaurant (no. of people * average restaurang price)
+    Then calculate the price of the restaurant (no. of people * average restaurant price)
     and call the function to calculate the gas price.
     Reducing the budget by the total cost of both.
     """
-    restaurant_choice = input("""
-                    From the table you have choose the restaurant and write it here:  
-                    """)
-    bag_of_restaurants_names = filtered_table['name_x'].tolist()
+    restaurant_choice = input(colored("""
+                    From the table you have, choose the restaurant and write it here:  
+                    """, 'magenta'))
+    bag_of_restaurants_names = filtered_table['Name'].tolist()
     while str(restaurant_choice) not in bag_of_restaurants_names:
-        print("\n Ohh, you probably mispelled your restaurant, type it again please:")
-        restaurant_choice = input("From the table you have choose the restaurant and write it here:  ") 
+        print(colored("""
+                    Ohh, you probably mispelled your restaurant, type it again please """, 'red'))
+        restaurant_choice = input(colored("""
+                    From the table you have choose the restaurant and write it here:  
+                    """, 'magenta')) 
 
-    restaurant_price = filtered_table[filtered_table["name_x"] == str(restaurant_choice)]
+    chosen_restaurant = filtered_table[filtered_table["Name"] == str(restaurant_choice)]
    
     #If you don't have enough budget it will break, if you can it will start again:
-    if BEGIN['budget'] < (float(restaurant_price["price_per_person"])* BEGIN['people']) + get_price_per_distance(BEGIN['loc_list']):
-        print("""
+    if BEGIN['budget'] < (float(chosen_restaurant["price_per_person"])* BEGIN['people']) + get_price_per_distance(BEGIN['loc_list']):
+        print(colored("""
                     Uppps. You do not have enough money to eat here!
-                """)
+                """, 'red'))
         filtering_with_inputs(filtered_table)
     else:
-        print("\n You spent ",float(restaurant_price["price_per_person"]* BEGIN['people']),"€ on your meal and ", get_price_per_distance(BEGIN['loc_list']),"€ by driving from your previous point to the restaurant" )
-        total_price = (float(restaurant_price["price_per_person"])* BEGIN['people']) + get_price_per_distance(BEGIN['loc_list'])
-        difference = (BEGIN['budget'] - (float(restaurant_price["price_per_person"])* BEGIN['people'])) - get_price_per_distance(BEGIN['loc_list'])
+        print("\n You spent ",
+        float(chosen_restaurant["price_per_person"]* BEGIN['people']),
+        "€ on your meal and ", 
+        get_price_per_distance(BEGIN['loc_list']),
+        "€ by driving from your previous point to the restaurant")
+
+        total_price = (float(chosen_restaurant["price_per_person"])* BEGIN['people']) + get_price_per_distance(BEGIN['loc_list'])
+        difference = (BEGIN['budget'] - (float(chosen_restaurant["price_per_person"])* BEGIN['people'])) - get_price_per_distance(BEGIN['loc_list'])
         BEGIN['budget'] = difference
         BEGIN['budget'] = difference
-        print("""
-                    You still have: """, round(difference,2), "€")
+        print(colored("""
+                        You still have: """, 'blue'), colored(round(difference,2), 'blue'), colored("€", 'blue'))
         plan_dict ={'Restaurant Name': restaurant_choice, 'Total Price': total_price}
         BEGIN['plan_list'].append(plan_dict)
 
