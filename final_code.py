@@ -18,8 +18,8 @@ from termcolor import colored
 
 
 #My API_Key:
-#API_Key = input('Your API key: ')
-API_Key = 'AIzaSyDWEOLTOW2tZPC3E6IJJ-tbGQM88qFk76I'
+API_Key = input('Your API key: ')
+
 
 #Running googlemaps key:
 map_client = googlemaps.Client(API_Key)
